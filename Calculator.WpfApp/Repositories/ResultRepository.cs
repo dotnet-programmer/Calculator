@@ -1,9 +1,9 @@
-﻿using Calculator.WpfApp.Models;
-using Calculator.WpfApp.Models.Domains;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Calculator.WpfApp.Models;
+using Calculator.WpfApp.Models.Domains;
+using Microsoft.EntityFrameworkCore;
 
 namespace Calculator.WpfApp.Repositories;
 
@@ -31,8 +31,11 @@ internal class ResultRepository
 		using (AppDbContext context = new())
 		{
 			var resultToDelete = await context.Results.FindAsync(resultId);
-			context.Remove(resultToDelete);
-			await context.SaveChangesAsync();
+			if (resultToDelete is not null)
+			{
+				context.Remove(resultToDelete);
+				await context.SaveChangesAsync();
+			}
 		}
 	}
 

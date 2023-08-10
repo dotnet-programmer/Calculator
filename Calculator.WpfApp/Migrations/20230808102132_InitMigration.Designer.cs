@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Calculator.WpfApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20230404153602_InitMigration")]
+    [Migration("20230808102132_InitMigration")]
     partial class InitMigration
     {
         /// <inheritdoc />

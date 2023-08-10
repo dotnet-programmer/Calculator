@@ -1,5 +1,4 @@
-﻿/*
-    Grammar used in this program to handle expressions:
+﻿/* Grammar used in this program to handle expressions:
 
 	Expression:
         Term
@@ -23,30 +22,36 @@
 
     Number:
         floating-point-literal
+
  */
 
 using System;
 
-namespace Calculator.WpfApp.Models;
+namespace Calculator.WpfApp.Models.Calculation;
 
-internal class ExpressionParser
+internal class ExpressionParserMethod : ICalculate
 {
+	private const char SEPARATOR = '.';
+
 	private string? _expression;
-	private string? _separator;
 	private int _position;
 	private bool _isFull;
 	private bool _isEndOfExpression;
 	private Token? _buffer;
 
-	public string Calculate(string expression, string separator)
+	public string Calculate(string expression)
+	{
+		SetStartValues(expression);
+		return Expression().ToString();
+	}
+
+	private void SetStartValues(string expression)
 	{
 		_expression = expression;
-		_separator = separator;
 		_position = 0;
 		_isFull = false;
 		_isEndOfExpression = false;
 		_buffer = null;
-		return Expression().ToString();
 	}
 
 	private decimal Expression()
@@ -64,7 +69,7 @@ internal class ExpressionParser
 					left -= Term();
 					break;
 				default:
-					PutbackToken(token);
+					PutBackToken(token);
 					return left;
 			}
 		}
@@ -104,7 +109,7 @@ internal class ExpressionParser
 					}
 					break;
 				default:
-					PutbackToken(token);
+					PutBackToken(token);
 					return left;
 			}
 		}
@@ -149,10 +154,10 @@ internal class ExpressionParser
 		}
 
 		char actualChar = _expression[_position];
-		if (char.IsDigit(actualChar) || actualChar == _separator[0])
+		if (char.IsDigit(actualChar) || actualChar == SEPARATOR)
 		{
 			string number = string.Empty;
-			while (_position < _expression.Length && (char.IsDigit(_expression[_position]) || _expression[_position] == _separator[0]))
+			while (_position < _expression.Length && (char.IsDigit(_expression[_position]) || _expression[_position] == SEPARATOR))
 			{
 				number += _expression[_position];
 				_position++;
@@ -166,7 +171,7 @@ internal class ExpressionParser
 		}
 	}
 
-	private void PutbackToken(Token token)
+	private void PutBackToken(Token token)
 	{
 		_buffer = token;
 		_isFull = true;

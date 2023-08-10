@@ -1,47 +1,57 @@
-﻿using Calculator.WpfApp.Commands;
-using Calculator.WpfApp.Models;
-using Calculator.WpfApp.Models.Domains;
-using Calculator.WpfApp.Repositories;
-using Calculator.WpfApp.Views;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Calculator.WpfApp.Commands;
+using Calculator.WpfApp.Models.Calculation;
+using Calculator.WpfApp.Models.Domains;
+using Calculator.WpfApp.Repositories;
+using Calculator.WpfApp.Views;
 
 namespace Calculator.WpfApp.ViewModels;
 
-internal enum CalculationMethod
-{ DataTable, InfixToPostfix, ExpressionParser }
-
 internal class MainViewModel : BaseViewModel
 {
-	private CalculationMethod _calculationMethod;
-	private readonly DataTable _dataTable = new();
-	private readonly ExpressionParser _expressionParser = new();
-	private bool _isOperation;
-	private bool _isDecimalPointInNumber;
-	private bool _isSquareRootInNumber;
-	private bool _isResultDisplayed;
-	private bool _isMinusNumber;
-	private bool _canDeleteLastChar;
-	private const string _expressionStartChar = "_";
-	private const string _resultStartChar = "0";
-	private const string _squareRootChar = "√";
-	private const string _powerChar = "^";
-	private readonly string _separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+	private const string EXPRESSION_START_CHAR = "_";
+	private const string RESULT_START_CHAR = "0";
+	private const char SQUARE_ROOT_CHAR = '√';
+	private const char US_DECIMAL_SEPARATOR = '.';
+	private const char OPEN_BRACKET = '(';
+	private const char CLOSE_BRACKET = ')';
+
+	private readonly char _separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0];
 	private readonly List<char> _availableOperations = new() { '+', '-', '*', '/', '^' };
+	private readonly DataTableMethod _dataTableMethod = new();
+	private readonly ExpressionParserMethod _expressionParserMethod = new();
+	private readonly InfixToPostfixMethod _infixToPostfixMethod = new();
+
+	private ICalculate _calculationMethod;
+
+	private int _openBracket;
+	private int _closeBracket;
+
+	private bool _isOperation;
+	private bool _isMinusNumber;
+	private bool _isResultDisplayed;
+	private bool _canDeleteLastChar;
+	private bool _isSquareRootInNumber;
+	private bool _isDecimalPointInNumber;
 
 	public MainViewModel()
 	{
-		_isResultDisplayed = true;
-		_calculationMethod = CalculationMethod.InfixToPostfix;
-		ScreenExpression = _expressionStartChar;
-		ScreenResult = _resultStartChar;
 		SetCommands();
+		SetStartState();
+		_calculationMethod = _infixToPostfixMethod;
 	}
+
+	private bool IsTheResultDisplayedAndNotZero => _isResultDisplayed && ScreenResult is not RESULT_START_CHAR;
+	private bool IsSeparator => ScreenExpression.Last() == _separator;
+	private bool IsSquareRoot => ScreenExpression.Last() == SQUARE_ROOT_CHAR;
+	private bool IsCloseBracket => ScreenExpression.Last() == CLOSE_BRACKET;
+
+	#region Property binding
 
 	private string _screenExpression;
 	public string ScreenExpression
@@ -57,107 +67,66 @@ internal class MainViewModel : BaseViewModel
 		set { _screenResult = value; OnPropertyChanged(); }
 	}
 
+	#endregion Property binding
+
 	public ICommand LoadedWindowCommandAsync { get; private set; }
+	public ICommand ClearScreenCommand { get; private set; }
 	public ICommand AddNumberCommand { get; private set; }
 	public ICommand AddOperationCommand { get; private set; }
 	public ICommand AddMinusOperationCommand { get; private set; }
-	public ICommand ClearScreenCommand { get; private set; }
-	public ICommand GetResultCommandAsync { get; private set; }
 	public ICommand AddDecimalPointCommand { get; private set; }
-	public ICommand DeleteLastCharCommand { get; private set; }
-	public ICommand ShowHistoryCommand { get; private set; }
 	public ICommand AddSquareRootCommand { get; private set; }
-	public ICommand AddBracketCommand { get; private set; }
+	public ICommand AddOpenBracketCommand { get; private set; }
+	public ICommand AddCloseBracketCommand { get; private set; }
+	public ICommand GetResultCommand { get; private set; }
+	public ICommand DeleteLastCharCommand { get; private set; }
 	public ICommand ChangeCalculationMethodCommand { get; private set; }
+	public ICommand ShowHistoryCommand { get; private set; }
+	public ICommand ShowSettingsCommand { get; private set; }
 
 	private void SetCommands()
 	{
 		LoadedWindowCommandAsync = new RelayCommandAsync(LoadedWindowAsync);
-		AddNumberCommand = new RelayCommand(AddNumber);
+		ClearScreenCommand = new RelayCommand(ClearScreen);
+		AddNumberCommand = new RelayCommand(AddNumber, CanAddNumber);
 		AddOperationCommand = new RelayCommand(AddOperation, CanAddOperation);
 		AddMinusOperationCommand = new RelayCommand(AddOperation, CanAddMinusOperation);
-		ClearScreenCommand = new RelayCommand(ClearScreen);
-		GetResultCommandAsync = new RelayCommandAsync(GetResultAsync, CanGetResult);
 		AddDecimalPointCommand = new RelayCommand(AddDecimalPoint, CanAddDecimalPoint);
-		DeleteLastCharCommand = new RelayCommand(DeleteLastChar, CanDeleteLastChar);
-		ShowHistoryCommand = new RelayCommand(ShowHistory);
 		AddSquareRootCommand = new RelayCommand(AddSquareRoot, CanAddSquareRoot);
-		AddBracketCommand = new RelayCommand(AddBracket);
+		AddOpenBracketCommand = new RelayCommand(AddOpenBracket, CanAddOpenBracket);
+		AddCloseBracketCommand = new RelayCommand(AddCloseBracket, CanAddCloseBracket);
+		GetResultCommand = new RelayCommandAsync(GetResultAsync, CanGetResult);
+		DeleteLastCharCommand = new RelayCommand(DeleteLastChar, CanDeleteLastChar);
 		ChangeCalculationMethodCommand = new RelayCommand(ChangeCalculationMethod);
+		ShowHistoryCommand = new RelayCommand(ShowHistory);
+		ShowSettingsCommand = new RelayCommand(ShowSettings);
 	}
 
-	private async Task LoadedWindowAsync(object obj)
+	private async Task LoadedWindowAsync(object commandParameter)
 	{
 		if (!await ResultRepository.CheckConnectionAsync())
 		{
-			throw new InvalidOperationException("Błąd pliku bazy danych!");
+			throw new InvalidOperationException("Database error!");
 		}
 	}
 
-	private void ClearScreen(object obj)
+	private void ClearScreen(object commandParameter) => SetStartState();
+
+	private void AddNumber(object commandParameter)
 	{
-		ScreenExpression = _expressionStartChar;
-		ScreenResult = _resultStartChar;
-
-		_isDecimalPointInNumber = false;
-		_isOperation = false;
-		_canDeleteLastChar = false;
-		_isSquareRootInNumber = false;
-		_isResultDisplayed = true;
+		ClearExpressionIfAppInStartOrResultState();
+		string number = commandParameter.ToString() ?? string.Empty;
+		ScreenExpression += (number == "ANS") ? ScreenResult : number;
+		SetNumberState();
 	}
 
-	private void AddNumber(object obj)
-	{
-		if (ScreenExpression == _expressionStartChar || ScreenExpression == _resultStartChar || _isResultDisplayed)
-		{
-			ScreenExpression = string.Empty;
-		}
+	private bool CanAddNumber(object obj) => !IsCloseBracket;
 
-		if (obj is Key key)
-		{
-			obj = ConvertKeyToChar(key);
-		}
-		else if (obj is Tuple<object, object> tuple)
-		{
-			if ((Key)tuple.Item1 == Key.D9)
-			{
-				obj = '(';
-			}
-			else if ((Key)tuple.Item1 == Key.D0)
-			{
-				obj = ')';
-			}
-		}
-
-		ScreenExpression += obj.ToString();
-
-		_isOperation = false;
-		_isResultDisplayed = false;
-		_canDeleteLastChar = true;
-		_isMinusNumber = false;
-	}
-
-	private void AddOperation(object obj)
+	private void AddOperation(object commandParameter)
 	{
 		if (_isResultDisplayed)
 		{
 			ScreenExpression = ScreenResult;
-		}
-
-		if (obj is Key key)
-		{
-			if (key == Key.D6)
-			{
-				obj = _powerChar;
-			}
-			else
-			{
-				if (key == Key.D8)
-				{
-					key = Key.Multiply;
-				}
-				obj = ConvertKeyToChar(key);
-			}
 		}
 
 		if (_isOperation && !_isMinusNumber)
@@ -165,23 +134,17 @@ internal class MainViewModel : BaseViewModel
 			_isMinusNumber = true;
 		}
 
-		ScreenExpression += obj.ToString();
-
-		_isOperation = true;
-		_isDecimalPointInNumber = false;
-		_isResultDisplayed = false;
-		_canDeleteLastChar = true;
-		_isSquareRootInNumber = false;
+		ScreenExpression += commandParameter.ToString();
+		SetOperationState();
 	}
 
-	private bool CanAddOperation(object obj)
-		=> !_isOperation;
+	private bool CanAddOperation(object commandParameter) => !_isOperation && !IsSeparator;
 
-	private bool CanAddMinusOperation(object obj) => !_isMinusNumber;
+	private bool CanAddMinusOperation(object commandParameter) => !_isMinusNumber && !IsSeparator && !IsSquareRoot;
 
-	private void AddDecimalPoint(object obj)
+	private void AddDecimalPoint(object commandParameter)
 	{
-		if (_isResultDisplayed || ScreenExpression == _expressionStartChar)
+		if (ScreenExpression is EXPRESSION_START_CHAR || _isResultDisplayed)
 		{
 			ScreenExpression = "0";
 		}
@@ -191,222 +154,117 @@ internal class MainViewModel : BaseViewModel
 			ScreenExpression += "0";
 		}
 
-		ScreenExpression += ",";
-
-		_isDecimalPointInNumber = true;
-		_isResultDisplayed = false;
-		_isSquareRootInNumber = false;
-		_canDeleteLastChar = true;
+		ScreenExpression += _separator;
+		SetDecimalState();
 	}
 
-	private bool CanAddDecimalPoint(object obj)
-			=> !_isDecimalPointInNumber;
+	private bool CanAddDecimalPoint(object commandParameter) => !_isDecimalPointInNumber && !IsCloseBracket;
 
-	private void AddSquareRoot(object obj)
+	private void AddSquareRoot(object commandParameter)
 	{
-		if (ScreenExpression is _expressionStartChar or _resultStartChar)
-		{
-			ScreenExpression = _squareRootChar;
-		}
-		else if (_isResultDisplayed)
-		{
-			ScreenExpression = _squareRootChar + ScreenResult;
-		}
-		else if (_isOperation)
-		{
-			ScreenExpression += _squareRootChar;
-		}
-
-		_isSquareRootInNumber = true;
-		_isOperation = true;
-		_isResultDisplayed = false;
-		_canDeleteLastChar = true;
-		_isMinusNumber = true;
+		ClearExpressionIfAppInStartOrResultState();
+		ScreenExpression += SQUARE_ROOT_CHAR;
+		AddScreenResultToScreenExpression();
+		SetSquareRootState();
 	}
 
-	private bool CanAddSquareRoot(object obj)
-		=> !_isSquareRootInNumber && (_isOperation || _isResultDisplayed);
+	private bool CanAddSquareRoot(object commandParameter) => !_isSquareRootInNumber && (_isOperation || _isResultDisplayed);
 
-	private static char ConvertKeyToChar(Key key)
+	private void AddOpenBracket(object commandParameter)
 	{
-		// return value: https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?view=netframework-4.8
-		int keyCode = KeyInterop.VirtualKeyFromKey(key);
-
-		if (keyCode is >= 48 and <= 57)
-		{
-			// numbers 0-9
-			return (char)keyCode;
-		}
-		else if (keyCode is >= 96 and <= 105)
-		{
-			// Numpad keys 0-9
-			return (char)(keyCode - 48);
-		}
-		else if (keyCode is 187 or 189 or 191)
-		{
-			// keys + - /
-			return (char)(keyCode - 144);
-		}
-		else
-		{
-			// Numpad keys + - * /
-			return (char)(keyCode - 64);
-		}
+		ClearExpressionIfAppInStartOrResultState();
+		ScreenExpression += OPEN_BRACKET;
+		_openBracket++;
+		AddScreenResultToScreenExpression();
+		SetOpenBracketState();
 	}
 
-	private void AddBracket(object obj)
+	private bool CanAddOpenBracket(object commandParameter) => _isOperation || _isResultDisplayed && !IsSeparator;
+
+	private void AddCloseBracket(object commandParameter)
 	{
-		if (ScreenExpression is _expressionStartChar or _resultStartChar)
-		{
-			ScreenExpression = string.Empty;
-		}
-
-		if (obj is Key key)
-		{
-			if (key == Key.D9)
-			{
-				obj = '(';
-			}
-			else if (key == Key.D0)
-			{
-				obj = ')';
-			}
-		}
-
-		string text = obj.ToString();
-		if (text == "(")
-		{
-			_isOperation = true;
-		}
-
-		ScreenExpression += text;
-
-		if (_isResultDisplayed && ScreenResult != "0")
-		{
-			ScreenExpression += ScreenResult;
-		}
-
-		_isDecimalPointInNumber = false;
-		_isResultDisplayed = false;
-		_canDeleteLastChar = true;
-		_isSquareRootInNumber = false;
+		ScreenExpression += CLOSE_BRACKET;
+		_closeBracket++;
 	}
 
-	private async Task GetResultAsync(object obj)
-	{
-		if (_isResultDisplayed)
-		{
-			return;
-		}
+	private bool CanAddCloseBracket(object commandParameter) => _openBracket > _closeBracket && !_isOperation && !IsSeparator;
 
+	private async Task GetResultAsync(object commandParameter)
+	{
 		try
 		{
-			string? result = CalculateExpression();
-
-			if (result.Contains(_separator))
-			{
-				result = result.TrimEnd('0', _separator[0]);
-			}
-
-			ScreenResult = result;
-
-			_isResultDisplayed = true;
-			_isDecimalPointInNumber = false;
-			_canDeleteLastChar = false;
-			_isSquareRootInNumber = false;
-
-			await ResultRepository.AddResultAsync(new() { Expression = ScreenExpression, Value = ScreenResult, SaveDate = DateTime.Now });
-			ScreenExpression += "=";
+			string result = RemoveTrailingChars(CalculateExpression(), '0', _separator);
+			await ResultRepository.AddResultAsync(new Result { Expression = ScreenExpression, Value = result, SaveDate = DateTime.Now });
+			SetResultState(result);
 		}
 		catch (Exception ex)
 		{
-			ScreenResult = ex.Message;
+			System.Windows.MessageBox.Show(ex.Message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+			SetStartState();
 		}
 	}
 
-	private string CalculateExpression()
-	{
-		switch (_calculationMethod)
-		{
-			case CalculationMethod.DataTable:
-				return _dataTable.Compute(ScreenExpression.Replace(_separator, "."), null).ToString();
-			case CalculationMethod.InfixToPostfix:
-				return Calculation.Calculate(ScreenExpression, _separator);
-			case CalculationMethod.ExpressionParser:
-				return _expressionParser.Calculate(ScreenExpression, _separator);
-			default:
-				throw new InvalidOperationException("Invalid calculation method!");
-		}
-	}
+	private string RemoveTrailingChars(string text, params char[] chars) => text.Contains(_separator) ? text.TrimEnd(chars) : text;
 
-	private bool CanGetResult(object obj)
-		=> !_isOperation;
+	private bool CanGetResult(object commandParameter) => !_isOperation && !_isResultDisplayed && (_openBracket == _closeBracket);
 
-	private void DeleteLastChar(object obj)
+	private void DeleteLastChar(object commandParameter)
 	{
 		int charsToRemove = 1;
+		char lastChar = ScreenExpression.Last();
 
-		if (ScreenExpression.Last().ToString() == _separator)
+		if (lastChar == OPEN_BRACKET)
 		{
-			// delete "0,"
-			if (ScreenExpression[^2] == '0' && (ScreenExpression.Length == 2 || _availableOperations.Contains(ScreenExpression[^3])))
+			_openBracket--;
+		}
+		else if (lastChar == CLOSE_BRACKET)
+		{
+			_closeBracket--;
+		}
+		else if (lastChar == SQUARE_ROOT_CHAR)
+		{
+			_isSquareRootInNumber = false;
+		}
+		else if (lastChar == _separator)
+		{
+			if (ScreenExpression[^2] == '0' && (ScreenExpression.Length == 2 || _availableOperations.Contains(ScreenExpression[^3]) || ScreenExpression[^3] == OPEN_BRACKET))
 			{
 				charsToRemove = 2;
 			}
 			_isDecimalPointInNumber = false;
 		}
-		else if (ScreenExpression.Last().ToString() == _squareRootChar)
+		else if (_availableOperations.Contains(lastChar) && ScreenExpression.Length > 2 && (_availableOperations.Contains(ScreenExpression[^2]) || ScreenExpression[^2] == OPEN_BRACKET))
 		{
-			_isSquareRootInNumber = false;
+			_isMinusNumber = false;
 		}
 
 		ScreenExpression = ScreenExpression.Remove(ScreenExpression.Length - charsToRemove);
+		CheckExpressionAndSetAppState();
+	}
 
-		if (ScreenExpression.Length == 0)
+	private bool CanDeleteLastChar(object commandParameter) => _canDeleteLastChar;
+
+	private void ChangeCalculationMethod(object commandParameter)
+	{
+		if (commandParameter is Key key)
 		{
-			_canDeleteLastChar = false;
-			ScreenExpression = _expressionStartChar;
-		}
-
-		_isOperation = _availableOperations.Contains(ScreenExpression.Last());
-
-		_isMinusNumber = _isOperation && _availableOperations.Contains(ScreenExpression[^2]) || ScreenExpression[^2] == '(';
-
-		if (!_isOperation)
-		{
-			CheckDecimalPointAndSquareRoot();
+			_calculationMethod = key switch
+			{
+				Key.D1 => _dataTableMethod,
+				Key.D2 => _expressionParserMethod,
+				_ => _infixToPostfixMethod
+			};
+			string? calculationMethodName = _calculationMethod.ToString();
+			calculationMethodName = string.IsNullOrWhiteSpace(calculationMethodName) ? string.Empty : calculationMethodName[(calculationMethodName.LastIndexOf('.') + 1)..];
+			System.Windows.MessageBox.Show($"New calculation method: {calculationMethodName}", "Change calculation method", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
 		}
 	}
 
-	private void CheckDecimalPointAndSquareRoot()
+	private void ShowHistory(object commandParameter)
 	{
-		for (int i = ScreenExpression.Length - 1; i >= 0; i--)
-		{
-			if (ScreenExpression[i].ToString() == _separator)
-			{
-				_isDecimalPointInNumber = true;
-			}
-
-			if (ScreenExpression[i].ToString() == _squareRootChar)
-			{
-				_isSquareRootInNumber = true;
-			}
-
-			if (_availableOperations.Contains(ScreenExpression[i]))
-			{
-				break;
-			}
-		}
-	}
-
-	private bool CanDeleteLastChar(object obj)
-		=> _canDeleteLastChar;
-
-	private void ShowHistory(object obj)
-	{
-		var historyView = new HistoryView();
+		HistoryView historyView = new();
 		historyView.ShowDialog();
-		Result result = historyView.HistoryViewModel.HistoryResult;
+		Result result = historyView.HistoryViewModel.SelectedResult;
 
 		if (result != null)
 		{
@@ -419,31 +277,157 @@ internal class MainViewModel : BaseViewModel
 				ScreenExpression = result.Value;
 			}
 
-			CheckDecimalPointAndSquareRoot();
-
-			_isOperation = false;
-			_canDeleteLastChar = true;
-			_isResultDisplayed = false;
+			CheckIfNumberContainDecimalPointOrSquareRoot();
+			SetNumberState();
 		}
 	}
 
-	private void ChangeCalculationMethod(object obj)
+	private void ShowSettings(object obj)
 	{
-		if (obj is Key key)
+		// TODO
+	}
+
+	private void CheckExpressionAndSetAppState()
+	{
+		if (ScreenExpression.Length == 0)
 		{
-			switch (key)
-			{
-				case Key.D1:
-					_calculationMethod = CalculationMethod.DataTable;
-					break;
-				case Key.D2:
-					_calculationMethod = CalculationMethod.InfixToPostfix;
-					break;
-				case Key.D3:
-					_calculationMethod = CalculationMethod.ExpressionParser;
-					break;
-			}
-			ScreenResult = _calculationMethod.ToString();
+			SetStartState(false);
+			return;
+		}
+
+		char lastChar = ScreenExpression.Last();
+
+		if (char.IsDigit(lastChar))
+		{
+			CheckIfNumberContainDecimalPointOrSquareRoot();
+		}
+		else if (lastChar == _separator)
+		{
+			SetDecimalState();
+		}
+		else if (lastChar == SQUARE_ROOT_CHAR)
+		{
+			SetSquareRootState();
+		}
+		else if (lastChar == OPEN_BRACKET)
+		{
+			SetOpenBracketState();
 		}
 	}
+
+	private void CheckIfNumberContainDecimalPointOrSquareRoot()
+	{
+		for (int i = ScreenExpression.Length - 1; i >= 0; i--)
+		{
+			if (ScreenExpression[i] == _separator)
+			{
+				_isDecimalPointInNumber = true;
+			}
+
+			if (ScreenExpression[i] == SQUARE_ROOT_CHAR)
+			{
+				_isSquareRootInNumber = true;
+			}
+
+			if (_availableOperations.Contains(ScreenExpression[i]))
+			{
+				break;
+			}
+		}
+	}
+
+	private string CalculateExpression() => _calculationMethod.Calculate(ScreenExpression.Replace(_separator, US_DECIMAL_SEPARATOR)) ?? throw new InvalidOperationException("The given expression could not be evaluated");
+
+	private void ClearExpressionIfAppInStartOrResultState()
+	{
+		if (ScreenExpression is EXPRESSION_START_CHAR or RESULT_START_CHAR || _isResultDisplayed)
+		{
+			ScreenExpression = string.Empty;
+		}
+	}
+
+	private void AddScreenResultToScreenExpression()
+	{
+		if (IsTheResultDisplayedAndNotZero)
+		{
+			ScreenExpression += ScreenResult;
+		}
+	}
+
+	#region Set Application States
+
+	private void SetStartState(bool clearResult = true)
+	{
+		_isOperation = false;
+		_isMinusNumber = false;
+		_isResultDisplayed = true;
+		_canDeleteLastChar = false;
+		_isSquareRootInNumber = false;
+		_isDecimalPointInNumber = false;
+
+		ScreenExpression = EXPRESSION_START_CHAR;
+		if (clearResult)
+		{
+			ScreenResult = RESULT_START_CHAR;
+		}
+
+		_openBracket = _closeBracket = 0;
+	}
+
+	private void SetNumberState()
+	{
+		_isOperation = false;
+		_isMinusNumber = false;
+		_isResultDisplayed = false;
+		_canDeleteLastChar = true;
+	}
+
+	private void SetOperationState()
+	{
+		_isOperation = true;
+		_isResultDisplayed = false;
+		_canDeleteLastChar = true;
+		_isSquareRootInNumber = false;
+		_isDecimalPointInNumber = false;
+	}
+
+	private void SetDecimalState()
+	{
+		_isResultDisplayed = false;
+		_canDeleteLastChar = true;
+		_isSquareRootInNumber = false;
+		_isDecimalPointInNumber = true;
+	}
+
+	private void SetSquareRootState()
+	{
+		_isOperation = !IsTheResultDisplayedAndNotZero;
+		_isResultDisplayed = false;
+		_canDeleteLastChar = true;
+		_isSquareRootInNumber = true;
+	}
+
+	private void SetOpenBracketState()
+	{
+		_isOperation = !IsTheResultDisplayedAndNotZero;
+		_isResultDisplayed = false;
+		_canDeleteLastChar = true;
+		_isSquareRootInNumber = false;
+		_isDecimalPointInNumber = false;
+	}
+
+	private void SetResultState(string result)
+	{
+		_isResultDisplayed = true;
+		_canDeleteLastChar = false;
+		_isSquareRootInNumber = false;
+		_isDecimalPointInNumber = false;
+
+		ScreenExpression += "=";
+		ScreenResult = result;
+
+		_openBracket = _closeBracket = 0;
+	}
+
+	#endregion Set Application States
 }

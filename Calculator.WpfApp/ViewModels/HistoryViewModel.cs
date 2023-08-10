@@ -1,10 +1,9 @@
-﻿using Calculator.WpfApp.Commands;
-using Calculator.WpfApp.Models;
-using Calculator.WpfApp.Models.Domains;
-using Calculator.WpfApp.Repositories;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Calculator.WpfApp.Commands;
+using Calculator.WpfApp.Models.Domains;
+using Calculator.WpfApp.Repositories;
 
 namespace Calculator.WpfApp.ViewModels;
 
@@ -15,8 +14,10 @@ public class HistoryViewModel : BaseViewModel
 	public HistoryViewModel()
 	{
 		SetCommands();
-		RefreshHistory();
+		RefreshHistory().Wait();
 	}
+
+	#region Property binding
 
 	private Result _selectedResult;
 	public Result SelectedResult
@@ -32,40 +33,18 @@ public class HistoryViewModel : BaseViewModel
 		set { _results = value; OnPropertyChanged(); }
 	}
 
-	public Result HistoryResult { get; private set; }
+	#endregion Property binding
 
-	public ICommand GridDoubleClickCommand { get; private set; }
-	public ICommand DeleteValueAsyncCommand { get; private set; }
+	public ICommand DeleteValueCommand { get; private set; }
 	public ICommand MoveSelectionCommand { get; private set; }
 
 	private void SetCommands()
 	{
-		GridDoubleClickCommand = new RelayCommand(GridDoubleClick);
-		DeleteValueAsyncCommand = new RelayCommandAsync(DeleteValueAsync);
+		DeleteValueCommand = new RelayCommandAsync(DeleteValueAsync);
 		MoveSelectionCommand = new RelayCommand(MoveSelection);
 	}
 
-	private async Task RefreshHistory()
-	{
-		Results = new ObservableCollection<Result>(await ResultRepository.GetResultsAsync());
-		if (Results.Count > 0)
-		{
-			if (_selectedIndex > Results.Count - 1)
-			{
-				_selectedIndex--;
-			}
-			SelectedResult = Results[_selectedIndex];
-		}
-	}
-
-	private void GridDoubleClick(object obj)
-	{
-		HistoryViewParams historyViewParams = obj as HistoryViewParams;
-		HistoryResult = historyViewParams.Result;
-		historyViewParams.Window.Close();
-	}
-
-	private async Task DeleteValueAsync(object obj)
+	private async Task DeleteValueAsync(object commandParameter)
 	{
 		if (SelectedResult is not null)
 		{
@@ -75,9 +54,9 @@ public class HistoryViewModel : BaseViewModel
 		}
 	}
 
-	private void MoveSelection(object obj)
+	private void MoveSelection(object commandParameter)
 	{
-		if (obj is Key key)
+		if (commandParameter is Key key)
 		{
 			if (key == Key.Up && _selectedIndex > 0)
 			{
@@ -90,6 +69,19 @@ public class HistoryViewModel : BaseViewModel
 				_selectedIndex++;
 				SelectedResult = Results[_selectedIndex];
 			}
+		}
+	}
+
+	private async Task RefreshHistory()
+	{
+		Results = new(await ResultRepository.GetResultsAsync());
+		if (Results.Count > 0)
+		{
+			if (_selectedIndex > Results.Count - 1)
+			{
+				_selectedIndex--;
+			}
+			SelectedResult = Results[_selectedIndex];
 		}
 	}
 }

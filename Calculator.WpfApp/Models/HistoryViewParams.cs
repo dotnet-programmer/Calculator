@@ -1,5 +1,5 @@
-﻿using Calculator.WpfApp.Models.Domains;
-using System.Windows;
+﻿using System.Windows;
+using Calculator.WpfApp.Models.Domains;
 
 namespace Calculator.WpfApp.Models;
 
