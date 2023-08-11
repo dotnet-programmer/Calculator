@@ -1,5 +1,5 @@
-﻿using System.Windows.Input;
-using System.Windows;
+﻿using System.Windows;
+using System.Windows.Input;
 using Calculator.WpfApp.ViewModels;
 using MahApps.Metro.Controls;
 

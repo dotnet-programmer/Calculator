@@ -1,14 +1,32 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+					xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro">
 
 	<Style TargetType="{x:Type Button}"
 		   BasedOn="{StaticResource {x:Type Button}}">
 
-		<Setter Property="FontSize"
-				Value="26" />
-
 		<Setter Property="Margin"
 				Value="5" />
+
+		<Setter Property="FontSize"
+				Value="16" />
+
+		<Setter Property="HorizontalContentAlignment"
+				Value="Center" />
+
+		<Setter Property="VerticalContentAlignment"
+				Value="Center" />
+
+		<Setter Property="mah:ControlsHelper.ContentCharacterCasing"
+				Value="Normal" />
+	</Style>
+
+	<Style x:Key="BtnMainViewStyle"
+		   TargetType="{x:Type Button}"
+		   BasedOn="{StaticResource {x:Type Button}}">
+
+		<Setter Property="FontSize"
+				Value="26" />
 
 		<Setter Property="Focusable"
 				Value="False" />
@@ -28,16 +46,21 @@
 
 	<Style x:Key="BtnClearStyle"
 		   TargetType="{x:Type Button}"
-		   BasedOn="{StaticResource {x:Type Button}}">
+		   BasedOn="{StaticResource BtnMainViewStyle}">
 
 		<Setter Property="Background"
 				Value="IndianRed" />
+	</Style>
 
-		<Setter Property="HorizontalContentAlignment"
-				Value="Center" />
+	<Style x:Key="BtnSettingsViewStyle"
+		   TargetType="{x:Type Button}"
+		   BasedOn="{StaticResource {x:Type Button}}">
 
-		<Setter Property="VerticalContentAlignment"
-				Value="Center" />
+		<Setter Property="Width"
+				Value="100" />
+
+		<Setter Property="Height"
+				Value="35" />
 	</Style>
 
 	<Style TargetType="{x:Type TextBox}"
@@ -56,4 +79,13 @@
 				Value="True" />
 	</Style>
 
+	<Style TargetType="{x:Type RadioButton}"
+		   BasedOn="{StaticResource {x:Type RadioButton}}">
+
+		<Setter Property="Margin"
+				Value="10" />
+
+		<Setter Property="FontSize"
+				Value="18" />
+	</Style>
 </ResourceDictionary>

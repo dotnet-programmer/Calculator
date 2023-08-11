@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Calculator.WpfApp.Commands;
 using Calculator.WpfApp.Models.Domains;
@@ -19,8 +20,8 @@ public class HistoryViewModel : BaseViewModel
 
 	#region Property binding
 
-	private Result _selectedResult;
-	public Result SelectedResult
+	private Result? _selectedResult;
+	public Result? SelectedResult
 	{
 		get => _selectedResult;
 		set { _selectedResult = value; OnPropertyChanged(); }
@@ -37,11 +38,13 @@ public class HistoryViewModel : BaseViewModel
 
 	public ICommand DeleteValueCommand { get; private set; }
 	public ICommand MoveSelectionCommand { get; private set; }
+	public ICommand CloseWindowCommand { get; private set; }
 
 	private void SetCommands()
 	{
 		DeleteValueCommand = new RelayCommandAsync(DeleteValueAsync);
 		MoveSelectionCommand = new RelayCommand(MoveSelection);
+		CloseWindowCommand = new RelayCommand(CloseWindow);
 	}
 
 	private async Task DeleteValueAsync(object commandParameter)
@@ -70,6 +73,12 @@ public class HistoryViewModel : BaseViewModel
 				SelectedResult = Results[_selectedIndex];
 			}
 		}
+	}
+
+	private void CloseWindow(object commandParameter)
+	{
+		SelectedResult = null;
+		(commandParameter as Window)?.Close();
 	}
 
 	private async Task RefreshHistory()

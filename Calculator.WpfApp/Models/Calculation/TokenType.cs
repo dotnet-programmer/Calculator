@@ -2,5 +2,5 @@
 
 internal enum TokenType
 {
-    Operand, Operator
+	Operand, Operator
 }

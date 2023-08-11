@@ -250,9 +250,9 @@ internal class MainViewModel : BaseViewModel
 		{
 			_calculationMethod = key switch
 			{
-				Key.D1 => _dataTableMethod,
+				Key.D1 => _infixToPostfixMethod,
 				Key.D2 => _expressionParserMethod,
-				_ => _infixToPostfixMethod
+				Key.D3 => _dataTableMethod
 			};
 			string? calculationMethodName = _calculationMethod.ToString();
 			calculationMethodName = string.IsNullOrWhiteSpace(calculationMethodName) ? string.Empty : calculationMethodName[(calculationMethodName.LastIndexOf('.') + 1)..];
@@ -264,7 +264,7 @@ internal class MainViewModel : BaseViewModel
 	{
 		HistoryView historyView = new();
 		historyView.ShowDialog();
-		Result result = historyView.HistoryViewModel.SelectedResult;
+		Result? result = historyView.HistoryViewModel.SelectedResult;
 
 		if (result != null)
 		{
@@ -282,9 +282,10 @@ internal class MainViewModel : BaseViewModel
 		}
 	}
 
-	private void ShowSettings(object obj)
+	private void ShowSettings(object commandParameter)
 	{
-		// TODO
+		SettingsView settingsView = new();
+		settingsView.ShowDialog();
 	}
 
 	private void CheckExpressionAndSetAppState()
@@ -300,6 +301,7 @@ internal class MainViewModel : BaseViewModel
 		if (char.IsDigit(lastChar))
 		{
 			CheckIfNumberContainDecimalPointOrSquareRoot();
+			SetNumberState();
 		}
 		else if (lastChar == _separator)
 		{
@@ -312,6 +314,10 @@ internal class MainViewModel : BaseViewModel
 		else if (lastChar == OPEN_BRACKET)
 		{
 			SetOpenBracketState();
+		}
+		else if (_availableOperations.Contains(lastChar))
+		{
+			SetOperationState();
 		}
 	}
 
