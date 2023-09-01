@@ -2,7 +2,7 @@
 
 namespace Calculator.WpfApp.Models.Calculation;
 
-internal class DataTableMethod : ICalculate
+public class DataTableMethod : ICalculate
 {
 	private readonly DataTable _dataTable = new();
 

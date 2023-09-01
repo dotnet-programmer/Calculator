@@ -29,7 +29,7 @@ using System;
 
 namespace Calculator.WpfApp.Models.Calculation;
 
-internal class ExpressionParserMethod : ICalculate
+public class ExpressionParserMethod : ICalculate
 {
 	private const char SEPARATOR = '.';
 

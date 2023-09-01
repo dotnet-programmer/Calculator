@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Calculator.WpfApp.Models.Calculation;
 
-internal class InfixToPostfixMethod : ICalculate
+public class InfixToPostfixMethod : ICalculate
 {
 	private const char SEPARATOR = '.';
 	private bool _isMinusNumber;
