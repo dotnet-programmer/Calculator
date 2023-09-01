@@ -1,15 +1,22 @@
 ﻿using Calculator.WpfApp.Models.Calculation;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Calculator.UnitTests.Models.Calculation;
 
 internal class InfixToPostfixMethodTests
 {
-	[Test]
-	public void Calculate_WhenCalled_ShouldReturnResult()
+	private InfixToPostfixMethod _infixToPostfixMethod;
+
+	[SetUp]
+	public void SetUp() => _infixToPostfixMethod = new();
+
+	[TestCase("1+2", "3")]
+	[TestCase("0-1+-2", "-3")]
+	[TestCase("1-2", "-1")]
+	public void Calculate_WhenCalled_ShouldReturnResult(string expression, string expectedResult)
 	{
-		InfixToPostfixMethod infixToPostfixMethod = new();
-		var result = infixToPostfixMethod.Calculate("2+2*2");
-		Assert.AreEqual("6", result);
+		var result = _infixToPostfixMethod.Calculate(expression);
+		result.Should().Be(expectedResult);
 	}
 }
