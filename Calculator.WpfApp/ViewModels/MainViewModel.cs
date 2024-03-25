@@ -22,7 +22,7 @@ internal class MainViewModel : BaseViewModel
 	private const char CLOSE_BRACKET = ')';
 
 	private readonly char _separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0];
-	private readonly List<char> _availableOperations = new() { '+', '-', '*', '/', '^' };
+	private readonly List<char> _availableOperations = ['+', '-', '*', '/', '^'];
 	private readonly DataTableMethod _dataTableMethod = new();
 	private readonly ExpressionParserMethod _expressionParserMethod = new();
 	private readonly InfixToPostfixMethod _infixToPostfixMethod = new();
@@ -46,10 +46,17 @@ internal class MainViewModel : BaseViewModel
 		_calculationMethod = _infixToPostfixMethod;
 	}
 
-	private bool IsTheResultDisplayedAndNotZero => _isResultDisplayed && ScreenResult is not RESULT_START_CHAR;
-	private bool IsSeparator => ScreenExpression.Last() == _separator;
-	private bool IsSquareRoot => ScreenExpression.Last() == SQUARE_ROOT_CHAR;
-	private bool IsCloseBracket => ScreenExpression.Last() == CLOSE_BRACKET;
+	private bool IsTheResultDisplayedAndNotZero
+		=> _isResultDisplayed && ScreenResult is not RESULT_START_CHAR;
+
+	private bool IsSeparator
+		=> ScreenExpression.Last() == _separator;
+
+	private bool IsSquareRoot
+		=> ScreenExpression.Last() == SQUARE_ROOT_CHAR;
+
+	private bool IsCloseBracket
+		=> ScreenExpression.Last() == CLOSE_BRACKET;
 
 	#region Property binding
 
@@ -110,7 +117,8 @@ internal class MainViewModel : BaseViewModel
 		}
 	}
 
-	private void ClearScreen(object commandParameter) => SetStartState();
+	private void ClearScreen(object commandParameter)
+		=> SetStartState();
 
 	private void AddNumber(object commandParameter)
 	{
@@ -120,7 +128,8 @@ internal class MainViewModel : BaseViewModel
 		SetNumberState();
 	}
 
-	private bool CanAddNumber(object obj) => !IsCloseBracket;
+	private bool CanAddNumber(object obj)
+		=> !IsCloseBracket;
 
 	private void AddOperation(object commandParameter)
 	{
@@ -138,9 +147,11 @@ internal class MainViewModel : BaseViewModel
 		SetOperationState();
 	}
 
-	private bool CanAddOperation(object commandParameter) => !_isOperation && !IsSeparator;
+	private bool CanAddOperation(object commandParameter)
+		=> !_isOperation && !IsSeparator;
 
-	private bool CanAddMinusOperation(object commandParameter) => !_isMinusNumber && !IsSeparator && !IsSquareRoot;
+	private bool CanAddMinusOperation(object commandParameter)
+		=> !_isMinusNumber && !IsSeparator && !IsSquareRoot;
 
 	private void AddDecimalPoint(object commandParameter)
 	{
@@ -158,7 +169,8 @@ internal class MainViewModel : BaseViewModel
 		SetDecimalState();
 	}
 
-	private bool CanAddDecimalPoint(object commandParameter) => !_isDecimalPointInNumber && !IsCloseBracket;
+	private bool CanAddDecimalPoint(object commandParameter)
+		=> !_isDecimalPointInNumber && !IsCloseBracket;
 
 	private void AddSquareRoot(object commandParameter)
 	{
@@ -168,7 +180,8 @@ internal class MainViewModel : BaseViewModel
 		SetSquareRootState();
 	}
 
-	private bool CanAddSquareRoot(object commandParameter) => !_isSquareRootInNumber && (_isOperation || _isResultDisplayed);
+	private bool CanAddSquareRoot(object commandParameter)
+		=> !_isSquareRootInNumber && (_isOperation || _isResultDisplayed);
 
 	private void AddOpenBracket(object commandParameter)
 	{
@@ -179,7 +192,8 @@ internal class MainViewModel : BaseViewModel
 		SetOpenBracketState();
 	}
 
-	private bool CanAddOpenBracket(object commandParameter) => _isOperation || _isResultDisplayed && !IsSeparator;
+	private bool CanAddOpenBracket(object commandParameter)
+		=> _isOperation || _isResultDisplayed && !IsSeparator;
 
 	private void AddCloseBracket(object commandParameter)
 	{
@@ -187,7 +201,8 @@ internal class MainViewModel : BaseViewModel
 		_closeBracket++;
 	}
 
-	private bool CanAddCloseBracket(object commandParameter) => _openBracket > _closeBracket && !_isOperation && !IsSeparator;
+	private bool CanAddCloseBracket(object commandParameter)
+		=> _openBracket > _closeBracket && !_isOperation && !IsSeparator;
 
 	private async Task GetResultAsync(object commandParameter)
 	{
@@ -204,9 +219,11 @@ internal class MainViewModel : BaseViewModel
 		}
 	}
 
-	private string RemoveTrailingChars(string text, params char[] chars) => text.Contains(_separator) ? text.TrimEnd(chars) : text;
+	private string RemoveTrailingChars(string text, params char[] chars)
+		=> text.Contains(_separator) ? text.TrimEnd(chars) : text;
 
-	private bool CanGetResult(object commandParameter) => !_isOperation && !_isResultDisplayed && (_openBracket == _closeBracket);
+	private bool CanGetResult(object commandParameter)
+		=> !_isOperation && !_isResultDisplayed && (_openBracket == _closeBracket);
 
 	private void DeleteLastChar(object commandParameter)
 	{
@@ -242,7 +259,8 @@ internal class MainViewModel : BaseViewModel
 		CheckExpressionAndSetAppState();
 	}
 
-	private bool CanDeleteLastChar(object commandParameter) => _canDeleteLastChar;
+	private bool CanDeleteLastChar(object commandParameter)
+		=> _canDeleteLastChar;
 
 	private void ChangeCalculationMethod(object commandParameter)
 	{
@@ -342,7 +360,8 @@ internal class MainViewModel : BaseViewModel
 		}
 	}
 
-	private string CalculateExpression() => _calculationMethod.Calculate(ScreenExpression.Replace(_separator, US_DECIMAL_SEPARATOR)) ?? throw new InvalidOperationException("The given expression could not be evaluated");
+	private string CalculateExpression()
+		=> _calculationMethod.Calculate(ScreenExpression.Replace(_separator, US_DECIMAL_SEPARATOR)) ?? throw new InvalidOperationException("The given expression could not be evaluated");
 
 	private void ClearExpressionIfAppInStartOrResultState()
 	{

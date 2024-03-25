@@ -5,18 +5,12 @@ using System.Windows.Input;
 
 namespace Calculator.WpfApp.Commands;
 
-internal class RelayCommandAsync : ICommand
+internal class RelayCommandAsync(Func<object, Task> execute, Func<object, bool>? canExecute = null) : ICommand
 {
-	private readonly Func<object, Task> _execute;
-	private readonly Func<object, bool> _canExecute;
+	private readonly Func<object, Task> _execute = execute;
+	private readonly Func<object, bool> _canExecute = canExecute ?? (o => true);
 
-	private long isExecuting;
-
-	public RelayCommandAsync(Func<object, Task> execute, Func<object, bool>? canExecute = null)
-	{
-		_execute = execute;
-		_canExecute = canExecute ?? (o => true);
-	}
+	private long _isExecuting;
 
 	public event EventHandler? CanExecuteChanged
 	{
@@ -24,13 +18,15 @@ internal class RelayCommandAsync : ICommand
 		remove => CommandManager.RequerySuggested -= value;
 	}
 
-	public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+	public void RaiseCanExecuteChanged()
+		=> CommandManager.InvalidateRequerySuggested();
 
-	public bool CanExecute(object? parameter) => Interlocked.Read(ref isExecuting) == 0 && _canExecute(parameter);
+	public bool CanExecute(object? parameter)
+		=> Interlocked.Read(ref _isExecuting) == 0 && _canExecute(parameter);
 
 	public async void Execute(object? parameter)
 	{
-		Interlocked.Exchange(ref isExecuting, 1);
+		Interlocked.Exchange(ref _isExecuting, 1);
 		RaiseCanExecuteChanged();
 
 		try
@@ -39,7 +35,7 @@ internal class RelayCommandAsync : ICommand
 		}
 		finally
 		{
-			Interlocked.Exchange(ref isExecuting, 0);
+			Interlocked.Exchange(ref _isExecuting, 0);
 			RaiseCanExecuteChanged();
 		}
 	}

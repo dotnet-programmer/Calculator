@@ -9,7 +9,8 @@ internal class ExpressionParserMethodTests
 	private ExpressionParserMethod _expressionParserMethod;
 
 	[SetUp]
-	public void SetUp() => _expressionParserMethod = new();
+	public void SetUp()
+		=> _expressionParserMethod = new();
 
 	[TestCase("1+2", "3")]
 	[TestCase("0-1+-2", "-3")]

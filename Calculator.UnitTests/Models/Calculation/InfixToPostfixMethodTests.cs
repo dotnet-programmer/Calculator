@@ -9,7 +9,8 @@ internal class InfixToPostfixMethodTests
 	private InfixToPostfixMethod _infixToPostfixMethod;
 
 	[SetUp]
-	public void SetUp() => _infixToPostfixMethod = new();
+	public void SetUp()
+		=> _infixToPostfixMethod = new();
 
 	[TestCase("1+2", "3")]
 	[TestCase("0-1+-2", "-3")]

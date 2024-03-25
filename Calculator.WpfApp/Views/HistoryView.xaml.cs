@@ -8,11 +8,11 @@ namespace Calculator.WpfApp.Views;
 /// </summary>
 public partial class HistoryView : MetroWindow
 {
-	public HistoryViewModel HistoryViewModel { get; } = new HistoryViewModel();
-
 	public HistoryView()
 	{
 		InitializeComponent();
 		DataContext = HistoryViewModel;
 	}
+
+	public HistoryViewModel HistoryViewModel { get; } = new HistoryViewModel();
 }

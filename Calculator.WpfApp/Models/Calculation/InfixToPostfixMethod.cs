@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Calculator.WpfApp.Models.Calculation;
 
@@ -12,12 +11,13 @@ public class InfixToPostfixMethod : ICalculate
 	private const char SEPARATOR = '.';
 	private bool _isMinusNumber;
 
-	public string Calculate(string expression) => PostfixEvaluator(InfixToPostfix(expression));
+	public string Calculate(string expression) 
+		=> PostfixEvaluator(InfixToPostfix(expression));
 
 	private List<Token> InfixToPostfix(string expression)
 	{
-		Stack<char> operators = new();
-		List<Token> tokensInPostfixNotation = new();
+		Stack<char> operators = [];
+		List<Token> tokensInPostfixNotation = [];
 		Dictionary<char, int> operatorsPrecedenceMap = new()
 		{
 			['('] = 0,
@@ -34,8 +34,7 @@ public class InfixToPostfixMethod : ICalculate
 			char actualChar = expression[i];
 			if (char.IsDigit(actualChar) || actualChar == SEPARATOR)
 			{
-				string number = MakeNumber();
-				tokensInPostfixNotation.Add(new(TokenType.Operand, number));
+				tokensInPostfixNotation.Add(new(TokenType.Operand, MakeNumber()));
 			}
 			else
 			{
@@ -58,9 +57,9 @@ public class InfixToPostfixMethod : ICalculate
 					}
 					_ = operators.Pop();
 				}
-				else if (operatorsPrecedenceMap.ContainsKey(actualChar))
+				else if (operatorsPrecedenceMap.TryGetValue(actualChar, out int value))
 				{
-					while (operators.Any() && operatorsPrecedenceMap[operators.Peek()] >= operatorsPrecedenceMap[actualChar])
+					while (operators.Count != 0 && operatorsPrecedenceMap[operators.Peek()] >= value)
 					{
 						AddOperatorToTokens(operators.Pop());
 					}
@@ -80,14 +79,15 @@ public class InfixToPostfixMethod : ICalculate
 			}
 		}
 
-		while (operators.Any())
+		while (operators.Count != 0)
 		{
 			AddOperatorToTokens(operators.Pop());
 		}
 
 		return tokensInPostfixNotation;
 
-		void AddOperatorToTokens(char operatorToAdd) => tokensInPostfixNotation.Add(new(TokenType.Operator, operatorToAdd));
+		void AddOperatorToTokens(char operatorToAdd) 
+			=> tokensInPostfixNotation.Add(new(TokenType.Operator, operatorToAdd));
 
 		string MakeNumber()
 		{
@@ -117,7 +117,7 @@ public class InfixToPostfixMethod : ICalculate
 
 	private string PostfixEvaluator(List<Token> tokens)
 	{
-		Stack<decimal> resultStack = new();
+		Stack<decimal> resultStack = [];
 
 		for (int i = 0; i < tokens.Count; i++)
 		{

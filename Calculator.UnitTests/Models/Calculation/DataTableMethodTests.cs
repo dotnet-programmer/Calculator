@@ -9,7 +9,8 @@ internal class DataTableMethodTests
 	private DataTableMethod _dataTableMethod;
 
 	[SetUp]
-	public void SetUp() => _dataTableMethod = new();
+	public void SetUp()
+		=> _dataTableMethod = new();
 
 	[TestCase("1+2", "3")]
 	[TestCase("0-1+-2", "-3")]
